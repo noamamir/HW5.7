@@ -6,8 +6,6 @@ Course Number: 014845
 Homework #5
 """
 from Point2D import Point2D
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon as p
 
 class Polygon:
     def __init__(self, points=None, id=None):
