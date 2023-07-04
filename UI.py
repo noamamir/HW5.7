@@ -67,7 +67,7 @@ class UI(tk.Tk):
         self.picking_end_point: bool = False
         self.selectedPathCords = []
         self.routes_loaded = 0
-        self.polygons_loaded = 0
+        self.polygons_loaded: bool = False
         self.chose_start_point: bool = False
         self.chose_end_point: bool = False
         self.graph = []
@@ -120,14 +120,20 @@ class UI(tk.Tk):
             else:
                 messagebox.showerror("Error", "polygon was already chosen, choose a different polygon")
         else:
-            print("Must be in start point or end point mode")
+            messagebox.showerror("Error", "Must be in start point or end point mode")
 
     # This function will allow us to load the paths into Polyline objects
     def load_routes(self):
+        if not self.polygons_loaded:
+            messagebox.showerror("Error", "Must load polygons first")
+            return
+
         file_path = self.browse_file()  # Finding the file path
 
         if file_path == '':
+            messagebox.showerror("Error", "Illegal file path, please try again")
             return
+
 
         file_vertices = open(file_path, "r")  # Accessing the file
         self.polyline_number = -1  # This index will allow us to count how many polylines we have in programming terminology
@@ -137,6 +143,10 @@ class UI(tk.Tk):
                 self.vertex_number.append(0)  # Restarting the count of vertices in this polyline
             else:
                 separated_points = line.split(',')
+                if len(separated_points) != 2 or separated_points[0] == '\n' or separated_points[1] == '\n':
+                    messagebox.showerror("Error", f"File contains illegal coordinate pair")
+                    return
+
                 self.points.append(Point2D(float(separated_points[1]), float(separated_points[0]),
                                            self.vertex_number[self.polyline_number]))  # We read the
                 # coordinates in reverse order so that they will fit the x,y format of Point2D
@@ -146,7 +156,7 @@ class UI(tk.Tk):
                     coords_to_print = [(self.points[-1].y, self.points[-1].x), (self.points[-2].y, self.points[-2].x)]
                     self.map_widget.set_path(coords_to_print, color="grey", width=3)
         self.routes_loaded = 1
-        if self.polygons_loaded == 1:  # Meaning, we have loaded both the routes and polygons; we will want to
+        if self.polygons_loaded:  # Meaning, we have loaded both the routes and polygons; we will want to
             # create our graph
             start_vertex = 0
             for i in range(self.polyline_number):
@@ -183,7 +193,7 @@ class UI(tk.Tk):
                 existing_polygon = 0  # this index tells us we are at a new polygon
             else:
                 separated_points = line.split(',')
-                if len(separated_points) != 2:
+                if len(separated_points) != 2 or separated_points[0] == '\n' or separated_points[1] == '\n':
                     messagebox.showerror("Error", f"File contains illegal coordinate pair")
                     return
 
@@ -196,7 +206,7 @@ class UI(tk.Tk):
                     num_of_vertices[i] = existing_polygon + 1
                 existing_polygon = existing_polygon + 1
 
-        self.polygons_loaded = 1
+        self.polygons_loaded = True
         if self.routes_loaded == 1:  # Meaning, we have loaded both the routes and polygons; we will want to
             # create our graph
             start_vertex = 0
@@ -239,7 +249,7 @@ class UI(tk.Tk):
         # Clearing the memory
         self.polygon_list = []
         self.path_list = []
-        self.polygons_loaded = 0
+        self.polygons_loaded = False
         self.routes_loaded = 0
 
     def pick_start_point(self):
