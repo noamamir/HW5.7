@@ -8,6 +8,7 @@ Homework #5
 import numpy as np
 import math
 
+
 # A class of 2-dimensional points
 class Point2D:
 
@@ -64,14 +65,14 @@ class Point2D:
 
     def point_translate(self, dx, dy):
         # representing the point in homogenous form
-        homogenous_point= np.array([[self.x], [self.y], [1]])
+        homogenous_point = np.array([[self.x], [self.y], [1]])
         # turning the requested translation into an array
         translation_matrix = np.array([[1, 0, dx], [0, 1, dy], [0, 0, 1]])
         # Performing the translation
-        new_point= np.dot(homogenous_point, translation_matrix)
+        new_point = np.dot(homogenous_point, translation_matrix)
         # Normalizing the result
-        for element in range(len(new_point)-1):
-            new_point[element] = new_point[element]/new_point[-1]
+        for element in range(len(new_point) - 1):
+            new_point[element] = new_point[element] / new_point[-1]
         # Updating the original point
         self.x = new_point[1]
         self.y = new_point[2]
@@ -81,7 +82,7 @@ class Point2D:
         # representing the point in homogenous form
         homogenous_point = np.array([[self.x], [self.y], [1]])
         # representing the input angle as radians
-        theta = theta*(math.pi/180)
+        theta = theta * (math.pi / 180)
         # turning the requested rotation into an array
         rotation_matrix = np.array([[math.cos(theta), -math.sin(theta), 0],
                                     [math.sin(theta), math.cos(theta), 0],

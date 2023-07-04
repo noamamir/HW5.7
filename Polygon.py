@@ -5,8 +5,13 @@ Course Name: Object-Oriented Programming for Geographic Information
 Course Number: 014845
 Homework #5
 """
+from Point2D import Point2D
+
+
 class Polygon:
-    def __init__(self, points, id=None):
+    def __init__(self, points=None, id=None):
+        if points is None:
+            points = []
         self.points = points
         self.id = id
         

@@ -59,8 +59,8 @@ class UI(tk.Tk):
         # self.map_widget.add_left_click_map_command(self.left_click_event)
 
         # We set global fields for use across different functions
-        self.start_polygon = []
-        self.end_polygon = []
+        self.start_polygon: Polygon = Polygon()
+        self.end_polygon: Polygon = Polygon()
         self.polygon_list = []
         self.path_list = []
         self.picking_start_point: bool = False
@@ -68,8 +68,8 @@ class UI(tk.Tk):
         self.selectedPathCords = []
         self.routes_loaded = 0
         self.polygons_loaded = 0
-        self.chose_start_point:bool = False
-        self.chose_end_point:bool = False
+        self.chose_start_point: bool = False
+        self.chose_end_point: bool = False
         self.graph = []
         self.polyline_number = 0
         self.points = []
@@ -94,7 +94,7 @@ class UI(tk.Tk):
     def left_click_event(self, coordinates_tuple):
         if not (self.routes_loaded and self.polygons_loaded):
             messagebox.showerror("Error", "Please load elements onto the Map first.")
-        closest_polygon = [0]  # A placeholder value
+        closest_polygon = Polygon()  # A placeholder value
         minimum_distance = np.inf  # Initializing the current smallest distance as infinity
         # We run through all the vertices of all the polygons to find the closest one to our point
         for polygon in range(len(self.polygon_list)):
@@ -103,16 +103,22 @@ class UI(tk.Tk):
                                     (coordinates_tuple[1] - self.polygon_list[polygon].coords[point][1]) ** 2) ** 0.5
             if minimum_distance > current_distance:
                 minimum_distance = current_distance
-                closest_polygon[0] = self.polygon_list[polygon]
+                closest_polygon = self.polygon_list[polygon]
         # We assign it as the start or end polygon, depending on the mode we are in, and highlight it on the map
         if self.picking_start_point is True:
-            self.start_polygon.append(closest_polygon[0])
-            self.map_widget.set_polygon(self.start_polygon[0].coords, outline_color="#90EE90", fill_color="#8D0D80")
-            self.chose_start_point = True
+            if self.end_polygon.coords is not closest_polygon.coords:
+                self.start_polygon = closest_polygon
+                self.map_widget.set_polygon(self.start_polygon.coords, outline_color="#90EE90", fill_color="#8D0D80")
+                self.chose_start_point = True
+            else:
+                messagebox.showerror("Error", "polygon was already chosen, choose a different polygon")
         elif self.picking_end_point is True:
-            self.end_polygon.append(closest_polygon[0])
-            self.map_widget.set_polygon(self.end_polygon[0].coords, outline_color="#90EE90", fill_color="#8D0D80")
-            self.chose_end_point = True
+            if self.start_polygon.coords is not closest_polygon.coords:
+                self.end_polygon = closest_polygon
+                self.map_widget.set_polygon(self.end_polygon.coords, outline_color="#90EE90", fill_color="#8D0D80")
+                self.chose_end_point = True
+            else:
+                messagebox.showerror("Error", "polygon was already chosen, choose a different polygon")
         else:
             print("Must be in start point or end point mode")
 
@@ -122,7 +128,6 @@ class UI(tk.Tk):
 
         if file_path == '':
             return
-
 
         file_vertices = open(file_path, "r")  # Accessing the file
         self.polyline_number = -1  # This index will allow us to count how many polylines we have in programming terminology
@@ -135,8 +140,7 @@ class UI(tk.Tk):
                 self.points.append(Point2D(float(separated_points[1]), float(separated_points[0]),
                                            self.vertex_number[self.polyline_number]))  # We read the
                 # coordinates in reverse order so that they will fit the x,y format of Point2D
-                self.vertex_number[self.polyline_number] = self.vertex_number[
-                                                               self.polyline_number] + 1  # Showing that we added another
+                self.vertex_number[self.polyline_number] = self.vertex_number[self.polyline_number] + 1  # Showing that we added another
                 # vertex
                 if len(self.points) >= 2:  # If we have more than two points, we want to add the next line to the map
                     coords_to_print = [(self.points[-1].y, self.points[-1].x), (self.points[-2].y, self.points[-2].x)]
@@ -161,6 +165,7 @@ class UI(tk.Tk):
         file_path = self.browse_file()  # Finding the file path
 
         if file_path == '':
+            messagebox.showerror("Error", "Illegal file path, please try again")
             return
 
         file_vertices = open(file_path, "r", encoding='utf8')  # Saving the file path as an object, taking into account
@@ -178,6 +183,10 @@ class UI(tk.Tk):
                 existing_polygon = 0  # this index tells us we are at a new polygon
             else:
                 separated_points = line.split(',')
+                if len(separated_points) != 2:
+                    messagebox.showerror("Error", f"File contains illegal coordinate pair")
+                    return
+
                 coordinate_pairs.append((float(separated_points[1]), float(separated_points[0])))  # We read the
                 # coordinates in reverse order so that they will fit the x,y format of Point2D
                 # We add a loop to keep track of how many vertices this polygon has
@@ -186,6 +195,7 @@ class UI(tk.Tk):
                 else:
                     num_of_vertices[i] = existing_polygon + 1
                 existing_polygon = existing_polygon + 1
+
         self.polygons_loaded = 1
         if self.routes_loaded == 1:  # Meaning, we have loaded both the routes and polygons; we will want to
             # create our graph
@@ -252,8 +262,8 @@ class UI(tk.Tk):
 
     def pathfinder(self):
         """Calling the pathfinder function, which will also mark the shortest path on the map"""
-        if len(self.start_polygon) > 0 and len(self.end_polygon) > 0:
-            self.selectedPathCords = self.graph[0].shortestPath(self.start_polygon[0], self.end_polygon[0])
+        if self.start_polygon.id is not None and self.end_polygon.id is not None:
+            self.selectedPathCords = self.graph[0].shortestPath(self.start_polygon, self.end_polygon)
 
             for path in self.selectedPathCords:
                 self.map_widget.set_path(path, color="orange", width=5)
@@ -265,14 +275,13 @@ class UI(tk.Tk):
     # We reset the selections for start and end polygons and take off their color on the map, same for optimal path
     def clear_endpoints(self):
         if self.chose_start_point is True:
-            self.map_widget.set_polygon(self.start_polygon[0].coords, outline_color="black", fill_color="turquoise")
+            self.map_widget.set_polygon(self.start_polygon.coords, outline_color="black", fill_color="turquoise")
         if self.chose_end_point is True:
-            self.map_widget.set_polygon(self.end_polygon[0].coords, outline_color="black", fill_color="turquoise")
-        self.start_polygon = []
-        self.end_polygon = []
+            self.map_widget.set_polygon(self.end_polygon.coords, outline_color="black", fill_color="turquoise")
+        self.start_polygon = Polygon()
+        self.end_polygon = Polygon()
         self.chose_start_point = 0
         self.chose_end_point = 0
-        self.graph = []
         self.polyline_number = 0
         self.points = []
         self.vertex_number = []
