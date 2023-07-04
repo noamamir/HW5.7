@@ -29,11 +29,11 @@ class Route(Polyline):
                 Get the route coordinates as a list of tuples.
 
                 Returns:
-                    List of tuples representing the polygon coordinates- [(y1, x1), (y2, x2), ...]
+                    List of tuples representing the polygon coordinates- [(x1, y1), (x1, y1), ...]
                 """
         # We begin by initializing the list into which we will place our tuples
         coordinate_list = []
         for point in self.points:
-            coordinate_list.append((point.y, point.x))
+            coordinate_list.append((point.x, point.y))
         return coordinate_list
 

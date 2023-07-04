@@ -6,7 +6,8 @@ Course Number: 014845
 Homework #5
 """
 from Point2D import Point2D
-
+from shapely.geometry import Point
+from shapely.geometry.polygon import Polygon as p
 
 class Polygon:
     def __init__(self, points=None, id=None):
@@ -26,9 +27,15 @@ class Polygon:
         # We begin by initializing the list into which we will place our tuples
         coordinate_list = []
         for point in self.points:
-            coordinate_list.append((point.y,point.x))
+            coordinate_list.append((point.x, point.y))
         return coordinate_list
-        
+
+    # def is_point_inside_polygon(self, point):
+    #     polygon = p(self.coords)
+    #     point = Point((point.x, point.y))
+    #
+    #     return polygon.contains(point)
+
     def isInside(self, point):
         """
         Check if a given point is inside the polygon.
@@ -61,3 +68,12 @@ class Polygon:
                     inside = not inside
         
         return inside
+
+    def calculate_polygon_center(self):
+        # Calculate the average x and y coordinates of the polygon's points
+        sum_x = sum(point[0] for point in self.coords)
+        sum_y = sum(point[1] for point in self.coords)
+        center_x = sum_x / len(self.coords)
+        center_y = sum_y / len(self.coords)
+
+        return center_x, center_y

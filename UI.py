@@ -61,7 +61,7 @@ class UI(tk.Tk):
         # We set global fields for use across different functions
         self.start_polygon: Polygon = Polygon()
         self.end_polygon: Polygon = Polygon()
-        self.polygon_list = []
+        self.polygon_list: [Polygon] = []
         self.path_list = []
         self.picking_start_point: bool = False
         self.picking_end_point: bool = False
@@ -71,14 +71,11 @@ class UI(tk.Tk):
         self.chose_start_point: bool = False
         self.chose_end_point: bool = False
         self.graph = []
-        self.polyline_number = 0
-        self.points = []
-        self.vertex_number = []  # Keeping track of how many vertices there are to each polyline
 
     def init_map(self):
         try:
             # create map widget
-            map_widget = tkintermapview.TkinterMapView(self, width=800, height=600, corner_radius=0)
+            map_widget = tkintermapview.TkinterMapView(self, width=1600, height=800, corner_radius=0)
             map_widget.pack(side=tk.BOTTOM)
 
             # set current widget position and zoom
@@ -134,40 +131,57 @@ class UI(tk.Tk):
             messagebox.showerror("Error", "Illegal file path, please try again")
             return
 
-
         file_vertices = open(file_path, "r")  # Accessing the file
-        self.polyline_number = -1  # This index will allow us to count how many polylines we have in programming terminology
+
+        # the index of route
+        vertexNumber = -1
+
+        # array of routes which is made by an array of 2D points
+        baseRoutes = []
         for line in file_vertices:
             if line.startswith('#'):
-                self.polyline_number = self.polyline_number + 1  # Signifies that we have found a new polyline to make
-                self.vertex_number.append(0)  # Restarting the count of vertices in this polyline
+                vertexNumber += 1
+                baseRoutes.append([])
+
             else:
                 separated_points = line.split(',')
+
+                # we check if the file line syntax is legal
                 if len(separated_points) != 2 or separated_points[0] == '\n' or separated_points[1] == '\n':
                     messagebox.showerror("Error", f"File contains illegal coordinate pair")
                     return
 
-                self.points.append(Point2D(float(separated_points[1]), float(separated_points[0]),
-                                           self.vertex_number[self.polyline_number]))  # We read the
-                # coordinates in reverse order so that they will fit the x,y format of Point2D
-                self.vertex_number[self.polyline_number] = self.vertex_number[self.polyline_number] + 1  # Showing that we added another
-                # vertex
-                if len(self.points) >= 2:  # If we have more than two points, we want to add the next line to the map
-                    coords_to_print = [(self.points[-1].y, self.points[-1].x), (self.points[-2].y, self.points[-2].x)]
+                # adding the point to the current route we are reading from the file
+                baseRoutes[vertexNumber].append(
+                    Point2D(float(separated_points[0]), float(separated_points[1]), vertexNumber))
+
+                if len(baseRoutes[
+                           vertexNumber]) >= 2:  # If we have more than two points, we want to add the next line to the map
+                    coords_to_print = [(baseRoutes[vertexNumber][-1].x, baseRoutes[vertexNumber][-1].y),
+                                       (baseRoutes[vertexNumber][-2].x, baseRoutes[vertexNumber][-2].y)]
                     self.map_widget.set_path(coords_to_print, color="grey", width=3)
+
         self.routes_loaded = 1
         if self.polygons_loaded:  # Meaning, we have loaded both the routes and polygons; we will want to
             # create our graph
             start_vertex = 0
-            for i in range(self.polyline_number):
+            for i, baseRoute in enumerate(baseRoutes):
+                firstPolygon = None
+                lastPolygon = None
                 for polygon in self.polygon_list:
-                    if polygon.isInside(self.points[start_vertex]):  # Start Polygon
-                        s_polygon = polygon
-                    if polygon.isInside(self.points[start_vertex + self.vertex_number[i]]):
-                        t_polygon = polygon
-                self.path_list.append(
-                    Route(s_polygon, t_polygon, i, self.points[start_vertex:(start_vertex + self.vertex_number[i])]))
-                start_vertex = start_vertex + self.vertex_number[i]  # updating the starting vertex
+                    # check if first point of the route is inside the polygon, if it is its the first polygon
+                    if polygon.isInside(baseRoute[0]):  # Start Polygon
+                        firstPolygon = polygon
+
+                    # check if last point of the route is inside the polygon, if it is its the last polygon
+                    if polygon.isInside(baseRoute[-1]):
+                        lastPolygon = polygon
+
+                # if route has a first and last polygon initialize it as a proper route
+                if firstPolygon and lastPolygon:
+                    route = Route(firstPolygon, lastPolygon, i, baseRoute)
+                    self.path_list.append(route)
+
             self.graph.append(Graph(self.path_list, self.polygon_list))
 
     # This function allows us to load the polygons into Polygon objects.
@@ -193,12 +207,13 @@ class UI(tk.Tk):
                 existing_polygon = 0  # this index tells us we are at a new polygon
             else:
                 separated_points = line.split(',')
+                # we check if the file line syntax is legal
                 if len(separated_points) != 2 or separated_points[0] == '\n' or separated_points[1] == '\n':
                     messagebox.showerror("Error", f"File contains illegal coordinate pair")
                     return
 
-                coordinate_pairs.append((float(separated_points[1]), float(separated_points[0])))  # We read the
-                # coordinates in reverse order so that they will fit the x,y format of Point2D
+                coordinate_pairs.append((float(separated_points[0]), float(separated_points[1])))
+
                 # We add a loop to keep track of how many vertices this polygon has
                 if not existing_polygon:  # meaning, this is the first vertex in a polygon
                     num_of_vertices.append(existing_polygon + 1)
@@ -207,20 +222,6 @@ class UI(tk.Tk):
                 existing_polygon = existing_polygon + 1
 
         self.polygons_loaded = True
-        if self.routes_loaded == 1:  # Meaning, we have loaded both the routes and polygons; we will want to
-            # create our graph
-            start_vertex = 0
-            for i in range(self.polyline_number):
-                for polygon in self.polygon_list:
-                    if polygon.isInside(self.points[start_vertex]):  # Start Polygon
-                        s_polygon = polygon
-                    if polygon.isInside(self.points[start_vertex + self.vertex_number[i]]):
-                        t_polygon = polygon
-                self.path_list.append(
-                    Route(s_polygon, t_polygon, i, self.points[start_vertex:(start_vertex + self.vertex_number[i])]))
-                start_vertex = start_vertex + self.vertex_number[i]  # updating the starting vertex
-            self.graph.append(Graph(self.path_list, self.polygon_list))
-
         # Now, we construct the polygon objects from the name and a list of Point2D objects
         self.polygon_list = []
         already_read_vertices = 0  # This will allow us not to lose our place when creating the polygons
@@ -236,6 +237,8 @@ class UI(tk.Tk):
             # Finally, we add the polygons to the map
         for polygon in self.polygon_list:
             self.map_widget.set_polygon(polygon.coords, outline_color="black", fill_color="turquoise")
+            poly_center = polygon.calculate_polygon_center()
+            self.map_widget.set_marker(poly_center[0], poly_center[1], text=polygon.id)
 
     def browse_file(self):
         file_path = filedialog.askopenfilename(filetypes=[("txt Files", "*.txt")])
@@ -243,6 +246,7 @@ class UI(tk.Tk):
 
     def clear_map(self):
         # Clearing Graphically
+        self.map_widget.delete_all_marker()
         self.map_widget.delete_all_polygon()
         self.map_widget.delete_all_path()
 
@@ -292,9 +296,7 @@ class UI(tk.Tk):
         self.end_polygon = Polygon()
         self.chose_start_point = 0
         self.chose_end_point = 0
-        self.polyline_number = 0
-        self.points = []
-        self.vertex_number = []
+
         if len(self.selectedPathCords) > 0:
             """Reset the optimal path. Then, """
             self.resetChosenRoutes()
