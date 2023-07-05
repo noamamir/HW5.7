@@ -6,6 +6,7 @@ Course Number: 014845
 Homework #5
 """
 from Point2D import Point2D
+import math
 
 class Polygon:
     def __init__(self, points=None, id=None):
@@ -67,6 +68,7 @@ class Polygon:
         
         return inside
 
+
     def calculate_polygon_center(self):
         # Calculate the average x and y coordinates of the polygon's points
         sum_x = sum(point[0] for point in self.coords)
@@ -75,3 +77,11 @@ class Polygon:
         center_y = sum_y / len(self.coords)
 
         return center_x, center_y
+
+    def calculate_distance_from_polygon(self, x, y):
+        center_x, center_y = self.calculate_polygon_center()
+
+        distance = math.sqrt((center_x - x) ** 2 + (center_y - y) ** 2)
+        return distance
+
+

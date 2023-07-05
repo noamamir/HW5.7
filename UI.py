@@ -91,16 +91,17 @@ class UI(tk.Tk):
     def left_click_event(self, coordinates_tuple):
         if not (self.routes_loaded and self.polygons_loaded):
             messagebox.showerror("Error", "Please load elements onto the Map first.")
+
         closest_polygon = Polygon()  # A placeholder value
         minimum_distance = np.inf  # Initializing the current smallest distance as infinity
         # We run through all the vertices of all the polygons to find the closest one to our point
-        for polygon in range(len(self.polygon_list)):
-            for point in range(len(self.polygon_list[polygon].coords)):
-                current_distance = ((coordinates_tuple[0] - self.polygon_list[polygon].coords[point][0]) ** 2 +
-                                    (coordinates_tuple[1] - self.polygon_list[polygon].coords[point][1]) ** 2) ** 0.5
-            if minimum_distance > current_distance:
-                minimum_distance = current_distance
-                closest_polygon = self.polygon_list[polygon]
+        for polygon in self.polygon_list:
+            distance_from_selected = polygon.calculate_distance_from_polygon(coordinates_tuple[0], coordinates_tuple[1])
+            if minimum_distance > distance_from_selected:
+                minimum_distance = distance_from_selected
+                closest_polygon = polygon
+
+
         # We assign it as the start or end polygon, depending on the mode we are in, and highlight it on the map
         if self.picking_start_point is True:
             if self.end_polygon.coords is not closest_polygon.coords:
