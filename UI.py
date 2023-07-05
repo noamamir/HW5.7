@@ -103,14 +103,14 @@ class UI(tk.Tk):
 
 
         # We assign it as the start or end polygon, depending on the mode we are in, and highlight it on the map
-        if self.picking_start_point is True:
+        if self.picking_start_point is True and self.start_polygon.id is None:
             if self.end_polygon.coords is not closest_polygon.coords:
                 self.start_polygon = closest_polygon
                 self.map_widget.set_polygon(self.start_polygon.coords, outline_color="#90EE90", fill_color="#8D0D80")
                 self.chose_start_point = True
             else:
                 messagebox.showerror("Error", "polygon was already chosen, choose a different polygon")
-        elif self.picking_end_point is True:
+        elif self.picking_end_point is True and self.end_polygon.id is None:
             if self.start_polygon.coords is not closest_polygon.coords:
                 self.end_polygon = closest_polygon
                 self.map_widget.set_polygon(self.end_polygon.coords, outline_color="#90EE90", fill_color="#8D0D80")
@@ -118,7 +118,7 @@ class UI(tk.Tk):
             else:
                 messagebox.showerror("Error", "polygon was already chosen, choose a different polygon")
         else:
-            messagebox.showerror("Error", "Must be in start point or end point mode")
+            messagebox.showerror("Error", "Must be in start point or end point mode or point was already chosen")
 
     # This function will allow us to load the paths into Polyline objects
     def load_routes(self):
